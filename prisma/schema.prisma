@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserStatus {
+  ACTIVE
+  PENDING
+  BLOCKED
+}
+
+enum Role {
+  CUSTOMER
+  SUPER_ADMIN
+  OPERATOR
+  CONTENT_ADMIN
+  VIEWER
+}
+
+model User {
+  id            String    @id @default(uuid())
+  fullName      String    @map("full_name")
+  phone         String    @unique
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  pinHash       String?   @map("pin_hash")
+  status        UserStatus @default(PENDING)
+  role          Role      @default(CUSTOMER)
+  isVerified    Boolean   @default(false) @map("is_verified")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  refreshTokens RefreshToken[]
+  pockets       Pocket[]
+  cards         Card[]
+  shortcuts     UserShortcut[]
+  transactions  Transaction[] @relation("UserTransactions")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @map("token_hash")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+enum PocketType {
+  MAIN
+  SAVING
+  INVESTMENT
+  CHARITY
+}
+
+model Pocket {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  name          String
+  accountNumber String    @unique @map("account_number")
+  type          PocketType
+  balance       Decimal   @default(0.00) @db.Decimal(18, 2)
+  targetAmount  Decimal?  @db.Decimal(18, 2) @map("target_amount")
+  isPrimary     Boolean   @default(false) @map("is_primary")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cards         Card[]
+  
+  sourceTransactions Transaction[] @relation("SourcePocket")
+  destTransactions   Transaction[] @relation("DestPocket")
+
+  @@map("pockets")
+}
+
+enum TransactionType {
+  TRANSFER_IN
+  TRANSFER_OUT
+  QRIS
+  TOP_UP
+  BILL_PAYMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+model Transaction {
+  id                  String    @id @default(uuid())
+  reference           String    @unique
+  userId              String    @map("user_id")
+  sourcePocketId      String?   @map("source_pocket_id")
+  destinationPocketId String?   @map("destination_pocket_id")
+  type                TransactionType
+  amount              Decimal   @db.Decimal(18, 2)
+  adminFee            Decimal   @default(0.00) @db.Decimal(18, 2) @map("admin_fee")
+  status              TransactionStatus @default(PENDING)
+  description         String?
+  recipientName       String?   @map("recipient_name")
+  recipientBank       String?   @map("recipient_bank")
+  recipientAccount    String?   @map("recipient_account")
+  idempotencyKey      String?   @map("idempotency_key")
+  failureReason       String?   @map("failure_reason")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  completedAt         DateTime? @map("completed_at")
+
+  user                User      @relation("UserTransactions", fields: [userId], references: [id])
+  sourcePocket        Pocket?   @relation("SourcePocket", fields: [sourcePocketId], references: [id])
+  destPocket          Pocket?   @relation("DestPocket", fields: [destinationPocketId], references: [id])
+
+  @@map("transactions")
+}
+
+enum CardType {
+  DIGITAL
+  PHYSICAL
+}
+
+enum CardStatus {
+  ACTIVE
+  FROZEN
+  BLOCKED
+  EXPIRED
+}
+
+model Card {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  pocketId      String    @map("pocket_id")
+  cardType      CardType  @map("card_type")
+  cardName      String    @map("card_name") @default("Kartu Digital J-NAL")
+  maskedNumber  String    @map("masked_number")
+  expiryMonth   Int       @map("expiry_month")
+  expiryYear    Int       @map("expiry_year")
+  dailyLimit    Decimal   @default(10000000.00) @db.Decimal(18, 2) @map("daily_limit")
+  status        CardStatus @default(ACTIVE)
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pocket        Pocket    @relation(fields: [pocketId], references: [id])
+
+  @@map("cards")
+}
+
+model QrisMerchant {
+  id            String    @id @default(uuid())
+  merchantName  String    @map("merchant_name")
+  merchantId    String    @unique @map("merchant_id")
+  city          String
+  isActive      Boolean   @default(true) @map("is_active")
+
+  @@map("qris_merchants")
+}
+
+enum NotificationType {
+  TRANSACTION
+  SECURITY
+  PROMOTION
+  SYSTEM
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String?   @map("user_id") // Null means broadcast
+  title      String
+  message    String    @db.Text
+  type       NotificationType
+  isRead     Boolean   @default(false) @map("is_read")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+enum PromoStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+model Promotion {
+  id          String    @id @default(uuid())
+  title       String
+  description String    @db.Text
+  imageUrl    String?   @map("image_url")
+  status      PromoStatus @default(DRAFT)
+  startAt     DateTime  @map("start_at")
+  endAt       DateTime  @map("end_at")
+
+  @@map("promotions")
+}
+
+model UserShortcut {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  code      String
+  position  Int
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_shortcuts")
+}
