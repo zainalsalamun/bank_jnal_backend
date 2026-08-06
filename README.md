@@ -2,7 +2,7 @@
 
 Ini adalah repository untuk backend aplikasi **Bank J-NAL**, sebuah sistem perbankan digital modern yang dilengkapi dengan fitur kantong (pockets), manajemen kartu, transaksi QRIS, dan notifikasi.
 
-## 🛠️ Spesifikasi Teknologi
+## Spesifikasi Teknologi
 
 Backend ini dibangun menggunakan teknologi modern untuk memastikan performa, keamanan, dan *type-safety*:
 - **Language**: TypeScript
@@ -14,7 +14,7 @@ Backend ini dibangun menggunakan teknologi modern untuk memastikan performa, kea
 - **Authentication**: JSON Web Tokens (JWT) & bcrypt (Password Hashing)
 - **Development Tool**: `tsx` untuk eksekusi TypeScript on-the-fly
 
-## 🚀 Fitur Backend
+## Fitur Backend
 
 Aplikasi ini menyediakan berbagai modul API (RESTful) untuk melayani aplikasi frontend dan mobile:
 
@@ -54,7 +54,7 @@ Aplikasi ini menyediakan berbagai modul API (RESTful) untuk melayani aplikasi fr
    - Rute terpisah dengan Middleware Admin.
    - Monitoring keseluruhan transaksi sistem dan manajemen pengguna oleh administrator.
 
-## 💻 Cara Menjalankan (Running the App)
+## Cara Menjalankan (Running the App)
 
 Ikuti langkah-langkah di bawah ini untuk menjalankan aplikasi di lingkungan pengembangan (lokal):
 
