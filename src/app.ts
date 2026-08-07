@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerDocument } from './swagger';
 import { errorHandler } from './middleware/errorHandler';
 import { formatSuccess } from './utils/response';
 import authRoutes from './routes/v1/auth.routes';
@@ -18,6 +20,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Health Check
 app.get('/api/v1/health', (req, res) => {
