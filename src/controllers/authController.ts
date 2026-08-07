@@ -11,22 +11,35 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'refresh_secret';
 
 const loginSchema = z.object({
-  phone: z.string().min(5),
+  phone: z.string().min(5).optional(),
+  email: z.string().email().optional(),
   password: z.string().min(6),
 });
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { phone, password } = loginSchema.parse(req.body);
+    const { phone, email, password } = loginSchema.parse(req.body);
 
-    const user = await db.user.findUnique({ where: { phone } });
+    if (!phone && !email) {
+      return next(new AppError(400, 'VALIDATION_ERROR', 'Harap masukkan nomor handphone atau email'));
+    }
+
+    const user = await db.user.findFirst({ 
+      where: { 
+        OR: [
+          ...(phone ? [{ phone }] : []),
+          ...(email ? [{ email }] : [])
+        ]
+      } 
+    });
+    
     if (!user || user.status !== 'ACTIVE') {
-      return next(new AppError(401, 'UNAUTHORIZED', 'Nomor handphone atau password salah / akun tidak aktif'));
+      return next(new AppError(401, 'UNAUTHORIZED', 'Email/No. HP atau password salah / akun tidak aktif'));
     }
 
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
-      return next(new AppError(401, 'UNAUTHORIZED', 'Nomor handphone atau password salah'));
+      return next(new AppError(401, 'UNAUTHORIZED', 'Email/No. HP atau password salah'));
     }
 
     const accessToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '15m' });
