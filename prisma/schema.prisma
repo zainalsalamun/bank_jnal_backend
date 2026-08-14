@@ -1,9 +1,11 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum UserStatus {
@@ -39,6 +41,7 @@ model User {
   cards         Card[]
   shortcuts     UserShortcut[]
   transactions  Transaction[] @relation("UserTransactions")
+  savedAccounts SavedAccount[]
 
   @@map("users")
 }
@@ -210,4 +213,19 @@ model UserShortcut {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_shortcuts")
+}
+
+model SavedAccount {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  bankCode        String    @map("bank_code")
+  accountNumber   String    @map("account_number")
+  accountName     String    @map("account_name")
+  lastTransferAt  DateTime? @map("last_transfer_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bankCode, accountNumber])
+  @@map("saved_accounts")
 }
