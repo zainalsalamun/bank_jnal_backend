@@ -42,7 +42,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return next(new AppError(401, 'UNAUTHORIZED', 'Email/No. HP atau password salah'));
     }
 
-    const accessToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '15m' });
+    const accessToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     const refreshToken = jwt.sign({ userId: user.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     // Store refresh token
@@ -66,7 +66,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     res.json(formatSuccess({
       accessToken,
       refreshToken,
-      expiresIn: 900,
+      expiresIn: 604800,
       user: {
         id: user.id,
         fullName: user.fullName,
@@ -90,13 +90,13 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
     const user = await db.user.findUnique({ where: { id: decoded.userId } });
     if (!user || user.status !== 'ACTIVE') return next(new AppError(401, 'UNAUTHORIZED', 'Invalid token'));
 
-    const newAccessToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '15m' });
+    const newAccessToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     const newRefreshToken = jwt.sign({ userId: user.id }, JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     res.json(formatSuccess({
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
-      expiresIn: 900,
+      expiresIn: 604800,
     }));
   } catch (error) {
     next(new AppError(401, 'UNAUTHORIZED', 'Token tidak valid atau kedaluwarsa'));
