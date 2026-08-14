@@ -17,6 +17,7 @@ export const getDashboard = async (req: AuthRequest, res: Response, next: NextFu
 
     res.json(formatSuccess({
       greeting: "Assalamu'alaikum",
+      userId: userId,
       userName: user?.fullName,
       primaryPocket: primaryPocket ? {
         id: primaryPocket.id,
