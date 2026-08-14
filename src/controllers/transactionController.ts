@@ -5,6 +5,7 @@ import { AppError } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/authMiddleware';
 import bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
+import { io } from '../server';
 
 function generateReference(type: string) {
   const prefix = type === 'TRANSFER_IN' || type === 'TRANSFER_OUT' ? 'TRF' : type === 'QRIS' ? 'QRS' : 'TRX';
@@ -12,6 +13,27 @@ function generateReference(type: string) {
   const rand = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   return `${prefix}${date}${rand}`;
 }
+
+export const getSavedAccounts = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const savedAccounts = await db.savedAccount.findMany({
+      where: { userId: req.user!.id },
+      orderBy: { lastTransferAt: 'desc' },
+      take: 20
+    });
+
+    const formatted = savedAccounts.map(account => ({
+      bankCode: account.bankCode,
+      accountNumber: account.accountNumber,
+      accountName: account.accountName,
+      lastTransferAt: account.lastTransferAt
+    }));
+
+    res.json(formatSuccess(formatted));
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getTransactions = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -95,8 +117,10 @@ export const inquiryTransfer = async (req: AuthRequest, res: Response, next: Nex
       return next(new AppError(404, 'NOT_FOUND', 'Bank belum didukung'));
     }
 
+    const formattedAccountNumber = accountNumber.startsWith('JNAL-') ? accountNumber : `JNAL-${accountNumber}`;
+
     const pocket = await db.pocket.findUnique({
-      where: { accountNumber },
+      where: { accountNumber: formattedAccountNumber },
       include: { user: true }
     });
 
@@ -151,7 +175,10 @@ export const transfer = async (req: AuthRequest, res: Response, next: NextFuncti
     // Process Transaction Atomically
     const result = await db.$transaction(async (tx) => {
       const sourcePocket = await tx.pocket.findUnique({ where: { id: sourcePocketId } });
-      const destPocket = await tx.pocket.findUnique({ where: { accountNumber: destinationAccountNumber }, include: { user: true } });
+      const formattedDestination = destinationBankCode === 'JNAL' && !destinationAccountNumber.startsWith('JNAL-') 
+          ? `JNAL-${destinationAccountNumber}` 
+          : destinationAccountNumber;
+      const destPocket = await tx.pocket.findUnique({ where: { accountNumber: formattedDestination }, include: { user: true } });
       
       if (!sourcePocket || sourcePocket.userId !== user.id) {
         throw new AppError(404, 'NOT_FOUND', 'Kantong sumber tidak ditemukan');
@@ -214,19 +241,57 @@ export const transfer = async (req: AuthRequest, res: Response, next: NextFuncti
           completedAt: new Date()
         }
       });
+      
+      // Buat notifikasi di DB untuk penerima
+      await tx.notification.create({
+        data: {
+          userId: destPocket.userId,
+          title: 'Transfer Masuk',
+          message: `Kamu menerima transfer sebesar Rp ${transferAmount} dari ${user.fullName}`,
+          type: 'TRANSACTION'
+        }
+      });
 
-      return senderTx;
+      // Simpan/Update akun ke daftar tersimpan
+      await tx.savedAccount.upsert({
+        where: {
+          userId_bankCode_accountNumber: {
+            userId: user.id,
+            bankCode: destinationBankCode,
+            accountNumber: formattedDestination
+          }
+        },
+        update: {
+          accountName: destPocket.user.fullName,
+          lastTransferAt: new Date()
+        },
+        create: {
+          userId: user.id,
+          bankCode: destinationBankCode,
+          accountNumber: formattedDestination,
+          accountName: destPocket.user.fullName,
+          lastTransferAt: new Date()
+        }
+      });
+
+      return { senderTx, receiverId: destPocket.userId };
+    });
+
+    // Emit Socket.IO event to receiver
+    io.to(`user_${result.receiverId}`).emit('notification', {
+      title: 'Transfer Masuk',
+      message: `Kamu menerima transfer sebesar Rp ${amount} dari pengguna`
     });
 
     res.status(201).json(formatSuccess({
-      transactionId: result.id,
-      reference: result.reference,
-      recipientName: result.recipientName,
-      amount: result.amount,
-      adminFee: result.adminFee,
-      total: result.amount,
-      status: result.status,
-      createdAt: result.createdAt
+      transactionId: result.senderTx.id,
+      reference: result.senderTx.reference,
+      recipientName: result.senderTx.recipientName,
+      amount: result.senderTx.amount,
+      adminFee: result.senderTx.adminFee,
+      total: result.senderTx.amount,
+      status: result.senderTx.status,
+      createdAt: result.senderTx.createdAt
     }));
   } catch (error: any) {
     if (error instanceof AppError) {
