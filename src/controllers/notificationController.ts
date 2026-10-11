@@ -27,3 +27,15 @@ export const markRead = async (req: AuthRequest, res: Response, next: NextFuncti
     next(error);
   }
 };
+
+export const markAllRead = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    await db.notification.updateMany({
+      where: { userId: req.user!.id, isRead: false },
+      data: { isRead: true }
+    });
+    res.json(formatSuccess({ message: 'All notifications marked as read' }));
+  } catch (error) {
+    next(error);
+  }
+};

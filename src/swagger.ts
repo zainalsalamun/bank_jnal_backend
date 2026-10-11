@@ -115,6 +115,88 @@ export const swaggerDocument = {
         }
       }
     },
+    "/auth/forgot-password": {
+      post: {
+        tags: ["Auth & Onboarding"],
+        summary: "Lupa Password (Request OTP)",
+        description: "Mengirimkan 6-digit kode OTP ke nomor handphone atau email terdaftar.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["identifier"],
+                properties: {
+                  identifier: { type: "string", example: "081234567890" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Kode OTP berhasil dikirim" },
+          "404": { description: "Nomor HP atau Email tidak terdaftar" }
+        }
+      }
+    },
+    "/auth/verify-otp": {
+      post: {
+        tags: ["Auth & Onboarding"],
+        summary: "Verifikasi Kode OTP",
+        description: "Memvalidasi 6-digit kode OTP yang diterima pengguna.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["otp"],
+                properties: {
+                  phone: { type: "string", example: "081234567890" },
+                  otp: { type: "string", example: "123456" },
+                  resetToken: { type: "string" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Verifikasi OTP berhasil, mengembalikan verifiedToken" },
+          "400": { description: "Kode OTP salah atau kedaluwarsa" }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      post: {
+        tags: ["Auth & Onboarding"],
+        summary: "Reset Password Baru",
+        description: "Menyimpan password baru setelah verifikasi OTP berhasil.",
+        security: [],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["newPassword"],
+                properties: {
+                  verifiedToken: { type: "string" },
+                  phone: { type: "string", example: "081234567890" },
+                  newPassword: { type: "string", example: "passwordBaru123" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Password berhasil direset" },
+          "400": { description: "Sesi tidak valid atau password terlalu pendek" }
+        }
+      }
+    },
     "/auth/refresh": {
       post: {
         tags: ["Auth & Onboarding"],
@@ -488,6 +570,21 @@ export const swaggerDocument = {
         ],
         responses: {
           "200": { description: "Daftar riwayat transaksi nasabah" }
+        }
+      }
+    },
+    "/transactions/statement": {
+      get: {
+        tags: ["Transactions"],
+        summary: "Rekening Koran Bulanan (E-Statement)",
+        description: "Mengambil data rekapitulasi rekening koran bulanan resmi lengkap dengan saldo awal, saldo akhir, total debit/kredit, rincian transaksi, dan tanda tangan digital.",
+        parameters: [
+          { name: "month", in: "query", schema: { type: "integer", example: 8 } },
+          { name: "year", in: "query", schema: { type: "integer", example: 2026 } },
+          { name: "pocketId", in: "query", schema: { type: "string" } }
+        ],
+        responses: {
+          "200": { description: "Data rekening koran e-statement berhasil dimuat" }
         }
       }
     },

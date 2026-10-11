@@ -15,6 +15,7 @@ import cardsRoutes from './routes/v1/cards.routes';
 import promotionsRoutes from './routes/v1/promotions.routes';
 import notificationsRoutes from './routes/v1/notifications.routes';
 import adminRoutes from './routes/v1/admin.routes';
+import merchantRoutes from './routes/v1/merchant';
 
 const app = express();
 
@@ -29,7 +30,7 @@ app.get('/api/v1/health', (req, res) => {
   res.json(formatSuccess({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    database: 'connected' // We can improve this by actually pinging db
+    database: 'connected'
   }));
 });
 
@@ -45,6 +46,7 @@ app.use('/api/v1/cards', cardsRoutes);
 app.use('/api/v1/promotions', promotionsRoutes);
 app.use('/api/v1/notifications', notificationsRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/merchant', merchantRoutes);
 
 // 404 handler
 app.use((req, res, next) => {
