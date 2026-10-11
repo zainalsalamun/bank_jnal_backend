@@ -70,20 +70,23 @@ npm install
 ```
 
 ### 3. Konfigurasi Environment (`.env`)
-Buat file `.env` di *root directory* (atau gunakan yang sudah ada) dan sesuaikan isinya. Contoh standar `.env`:
+Salin file `.env.example` ke `.env`:
+```bash
+cp .env.example .env
+```
+Isi konfigurasi standar `.env`:
 ```env
-PORT=3000
-DATABASE_URL="postgresql://user:password@localhost:5432/bank_jnal_db?schema=public"
-JWT_SECRET="jnal_super_secret_key"
-JWT_REFRESH_SECRET="jnal_super_refresh_secret"
+PORT=3001
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bank_jnal?schema=public"
+JWT_SECRET="jnal_super_secret_key_2026_demo"
+JWT_REFRESH_SECRET="jnal_refresh_super_secret_key_2026_demo"
 ```
 
-### 4. Setup Database (Prisma)
-Generate Prisma Client dan sinkronisasi skema database ke PostgreSQL:
+### 4. Setup Database & Seeder Demo (Prisma)
+Sinkronkan skema database dan jalankan seeder untuk mengisi data akun demo otomatis:
 ```bash
-npx prisma generate
-npx prisma db push
-# atau gunakan `npx prisma migrate dev` jika menggunakan sistem migrasi
+npm run db:push
+npm run seed
 ```
 
 ### 5. Jalankan Development Server
@@ -92,4 +95,6 @@ Gunakan script `dev` yang sudah disediakan (menggunakan `tsx watch` untuk auto-r
 npm run dev
 ```
 
-Jika berhasil, backend akan berjalan dan siap menerima request (biasanya di `http://localhost:3000`).
+Jika berhasil, backend akan berjalan di:
+- **API Server**: `http://localhost:3001`
+- **Swagger API Docs**: `http://localhost:3001/api-docs`

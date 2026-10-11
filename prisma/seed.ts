@@ -1,6 +1,7 @@
 import { UserStatus, Role, PocketType, CardType, CardStatus, PromoStatus, NotificationType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { db as prisma } from '../src/config/db';
+import { seedMerchant } from './seed_merchant';
 
 async function main() {
   console.log('Starting seed...');
@@ -98,6 +99,9 @@ async function main() {
       endAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
     }
   });
+
+  // 8. Seed Merchant & POS Data
+  await seedMerchant();
 
   console.log('Seed completed.');
 }
